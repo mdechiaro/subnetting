@@ -163,6 +163,18 @@ class Subnetting(object):
 
         return self.bin2ipaddr(''.join(str(item) for item in network))
 
+    def wildcard(self, netmask):
+        """
+        Returns wildcard netmask from netmask. This is the inverse of the
+        subnet mask.
+
+        Args:
+            netmask (str): A netmask
+        """
+        bin_netmask = self.ipaddr2bin(netmask)
+        binary = ''.join('0' if x == '1' else '1' for x in bin_netmask)
+        return self.bin2ipaddr(binary)
+
     def isipaddrnet(self, ipaddr, network):
         """
         Compares the network and netmask with the given ip address and netmask.
