@@ -175,23 +175,50 @@ class Subnetting(object):
         binary = ''.join('0' if x == '1' else '1' for x in bin_netmask)
         return self.bin2ipaddr(binary)
 
+    # pylint: disable=too-many-locals
     def isipaddrnet(self, ipaddr, network):
         """
-        Compares the network and netmask with the given ip address and netmask.
-        It returns True if both the network and broadcast addresses match.
+        This method will iterate the values within a select range to determine
+        if the ip address in the network.
 
         Args:
-            ipaddr (str): An ip address and netmask
-                          format: 1.2.3.4/24 or 1.2.3.4/255.255.255.0
+            ipaddr (str): An ip address
+                          format: 1.2.3.4
             network (str): An ip address and netmask
                           format: 1.2.3.4/24 or 1.2.3.4/255.255.255.0
-        Returns:
-            bool: True if match or None
-        """
-        ipaddr_net = self.network(ipaddr)
-        network_net = self.network(network)
-        ipaddr_bcast = self.broadcast(ipaddr)
-        network_bcast = self.broadcast(network)
 
-        if ipaddr_net == network_net and ipaddr_bcast == network_bcast:
-            return True
+        Returns:
+            boolean: True or False
+        """
+        netmask = network.split('/')[1]
+        if int(netmask) <= 32:
+            netmask = self.cidr2netmask(netmask)
+            wildcard = self.wildcard(netmask)
+        else:
+            wildcard = self.wildcard(netmask)
+
+        net = self.network(network)
+        bcast = self.broadcast(network)
+
+        net_octets = net.split('.')
+        wildcard_octets = wildcard.split('.')
+        ipaddr_octets = ipaddr.split('.')
+        bcast_octets = bcast.split('.')
+
+        octets = (net_octets, ipaddr_octets, wildcard_octets, bcast_octets)
+
+        in_net = True
+
+        for n_octet, i_octet, w_octet, b_octet in zip(*octets):
+            # ip and net octets should be equal if wildcard is zero
+            if '0' in w_octet:
+                if not i_octet == n_octet:
+                    in_net = False
+            else:
+                # only check for valid ip address within network and broadcast
+                if (int(n_octet)+1) <= int(i_octet) <= (int(b_octet)-1):
+                    pass
+                else:
+                    in_net = False
+
+        return in_net
